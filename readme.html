@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome file</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="英単語カードアプリケーション仕様書">英単語カードアプリケーション仕様書</h1>
+<h2 id="アプリケーション概要">1. アプリケーション概要</h2>
+<h3 id="目的">1.1 目的</h3>
+<ul>
+<li>
+<p>Googleスプレッドシートのデータを利用した英単語学習アプリケーション</p>
+</li>
+<li>
+<p>単語と意味を双方向で学習可能</p>
+</li>
+<li>
+<p>学習進捗の管理と間違えた問題の復習機能を提供</p>
+</li>
+</ul>
+<h3 id="技術スタック">1.2 技術スタック</h3>
+<ul>
+<li>
+<p>HTML5</p>
+</li>
+<li>
+<p>CSS3</p>
+</li>
+<li>
+<p>Vanilla JavaScript</p>
+</li>
+<li>
+<p>Google Sheets API (CSV形式でのデータ取得)</p>
+</li>
+</ul>
+<h2 id="データ構造">2. データ構造</h2>
+<h3 id="データソース">2.1 データソース</h3>
+<ul>
+<li>
+<p>Google スプレッドシート（CSV形式）</p>
+</li>
+<li>
+<p>URL: <code>https://docs.google.com/spreadsheets/d/[spreadsheet-id]/pub?gid=0&amp;single=true&amp;output=csv</code></p>
+</li>
+</ul>
+<h3 id="データフォーマット">2.2 データフォーマット</h3>
+<pre><code>
+列B: 単語の意味
+
+列C: 英単語
+
+</code></pre>
+<h2 id="画面構成">3. 画面構成</h2>
+<h3 id="スタート画面">3.1 スタート画面</h3>
+<h4 id="構成要素">構成要素</h4>
+<ul>
+<li>
+<p>問題タイプ選択プルダウン</p>
+</li>
+<li>
+<p>選択肢1: 単語→意味</p>
+</li>
+<li>
+<p>選択肢2: 意味→単語</p>
+</li>
+<li>
+<p>スタートボタン</p>
+</li>
+</ul>
+<h3 id="単語カード問題画面">3.2 単語カード問題画面</h3>
+<h4 id="構成要素-1">構成要素</h4>
+<ul>
+<li>
+<p>問題表示カード</p>
+</li>
+<li>
+<p>答えを見るボタン</p>
+</li>
+<li>
+<p>終了するボタン</p>
+</li>
+</ul>
+<h4 id="機能">機能</h4>
+<ul>
+<li>
+<p>選択した問題タイプに応じて単語または意味を表示</p>
+</li>
+<li>
+<p>ランダムな順序で問題を出題</p>
+</li>
+<li>
+<p>途中で終了可能</p>
+</li>
+</ul>
+<h3 id="単語カード答え画面">3.3 単語カード答え画面</h3>
+<h4 id="構成要素-2">構成要素</h4>
+<ul>
+<li>
+<p>答え表示カード</p>
+</li>
+<li>
+<p>⭕ボタン</p>
+</li>
+<li>
+<p>❌ボタン</p>
+</li>
+</ul>
+<h4 id="機能-1">機能</h4>
+<ul>
+<li>
+<p>正解/不正解の記録</p>
+</li>
+<li>
+<p>ボタン押下で自動的に次の問題に遷移</p>
+</li>
+<li>
+<p>不正解の問題を記録</p>
+</li>
+</ul>
+<h3 id="完了画面">3.4 完了画面</h3>
+<h4 id="構成要素-3">構成要素</h4>
+<ul>
+<li>
+<p>完了メッセージ</p>
+</li>
+<li>
+<p>全問正解時: 特別な祝福メッセージとアニメーション</p>
+</li>
+<li>
+<p>通常時: 標準的な完了メッセージ</p>
+</li>
+<li>
+<p>学習統計</p>
+</li>
+<li>
+<p>合計問題数</p>
+</li>
+<li>
+<p>正解数</p>
+</li>
+<li>
+<p>不正解数</p>
+</li>
+<li>
+<p>操作ボタン</p>
+</li>
+<li>
+<p>間違えた問題を復習する（不正解が0件の場合は非表示）</p>
+</li>
+<li>
+<p>トップへ戻る</p>
+</li>
+</ul>
+<h2 id="主要な機能">4. 主要な機能</h2>
+<h3 id="データ管理">4.1 データ管理</h3>
+<pre class=" language-javascript"><code class="prism  language-javascript">
+<span class="token keyword">let</span> vocabularyData <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment">// 全単語データ</span>
+
+<span class="token keyword">let</span> currentQuestions <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment">// 現在の問題セット</span>
+
+<span class="token keyword">let</span> currentIndex <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> <span class="token comment">// 現在の問題インデックス</span>
+
+<span class="token keyword">let</span> incorrectQuestions <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment">// 間違えた問題のリスト</span>
+
+<span class="token keyword">let</span> stats <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token comment">// 統計情報</span>
+
+correct<span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+
+incorrect<span class="token punctuation">:</span> <span class="token number">0</span>
+
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+</code></pre>
+<h3 id="主要な関数">4.2 主要な関数</h3>
+<ul>
+<li>
+<p><code>loadVocabularyData()</code>: CSVデータの読み込み</p>
+</li>
+<li>
+<p><code>shuffleArray()</code>: 問題のランダム化</p>
+</li>
+<li>
+<p><code>showScreen()</code>: 画面切り替え</p>
+</li>
+<li>
+<p><code>showQuestion()</code>: 問題表示</p>
+</li>
+<li>
+<p><code>showAnswer()</code>: 答え表示</p>
+</li>
+<li>
+<p><code>goToNextQuestion()</code>: 次の問題への遷移</p>
+</li>
+<li>
+<p><code>showComplete()</code>: 完了画面表示</p>
+</li>
+</ul>
+<h3 id="音声読み上げ機能">4.3 音声読み上げ機能</h3>
+<h4 id="概要">4.3.1 概要</h4>
+<ul>
+<li>
+<p>Web Speech APIを使用した英単語の音声読み上げ</p>
+</li>
+<li>
+<p>問題画面と答え画面での単語読み上げ対応</p>
+</li>
+<li>
+<p>英語音声の優先使用</p>
+</li>
+</ul>
+<h4 id="表示条件">4.3.2 表示条件</h4>
+<ul>
+<li>
+<p>問題画面：単語→意味モード時のみ表示</p>
+</li>
+<li>
+<p>答え画面：意味→単語モード時のみ表示</p>
+</li>
+</ul>
+<h4 id="speechhandler-クラス">4.3.3 SpeechHandler クラス</h4>
+<pre class=" language-javascript"><code class="prism  language-javascript">
+<span class="token keyword">class</span> <span class="token class-name">SpeechHandler</span> <span class="token punctuation">{</span>
+
+<span class="token function">constructor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment">// 音声エンジンの初期化</span>
+
+<span class="token function">loadVoices</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment">// 利用可能な音声のロード</span>
+
+<span class="token function">speak</span><span class="token punctuation">(</span>text<span class="token punctuation">,</span> element<span class="token punctuation">)</span> <span class="token comment">// テキスト読み上げ実行</span>
+
+<span class="token punctuation">}</span>
+
+</code></pre>
+<h4 id="ui要素">4.3.4 UI要素</h4>
+<ul>
+<li>
+<p>スピーカーアイコン（🔊）</p>
+</li>
+<li>
+<p>読み上げ中のアニメーション効果</p>
+</li>
+<li>
+<p>ホバー時の色変更</p>
+</li>
+</ul>
+<h4 id="音声設定">4.3.5 音声設定</h4>
+<ul>
+<li>
+<p>読み上げ速度: 0.9（標準よりやや遅め）</p>
+</li>
+<li>
+<p>音量: 1.0（最大）</p>
+</li>
+<li>
+<p>ピッチ: 1.0（標準）</p>
+</li>
+</ul>
+<h4 id="エラーハンドリング">4.3.6 エラーハンドリング</h4>
+<ul>
+<li>
+<p>音声データ未読み込み時の対応</p>
+</li>
+<li>
+<p>読み上げ重複の防止</p>
+</li>
+<li>
+<p>音声切り替え時の状態管理</p>
+</li>
+</ul>
+<h2 id="スタイリング">5. スタイリング</h2>
+<h3 id="カラースキーム">5.1 カラースキーム</h3>
+<ul>
+<li>
+<p>メインカラー: <code>#4CAF50</code>（正解、プライマリーボタン）</p>
+</li>
+<li>
+<p>アクセントカラー:</p>
+</li>
+<li>
+<p><code>#f44336</code>（不正解）</p>
+</li>
+<li>
+<p><code>#ff9800</code>（終了ボタン）</p>
+</li>
+<li>
+<p>背景色: <code>#f0f2f5</code></p>
+</li>
+</ul>
+<h3 id="アニメーション">5.2 アニメーション</h3>
+<ul>
+<li>
+<p>全問正解時の祝福表示</p>
+</li>
+<li>
+<p><code>celebrate</code>: スケールアニメーション</p>
+</li>
+<li>
+<p><code>bounce</code>: バウンスアニメーション</p>
+</li>
+</ul>
+<h2 id="エラーハンドリング-1">6. エラーハンドリング</h2>
+<h3 id="データ読み込みエラー">6.1 データ読み込みエラー</h3>
+<pre class=" language-javascript"><code class="prism  language-javascript">
+<span class="token keyword">try</span> <span class="token punctuation">{</span>
+
+<span class="token keyword">const</span> response <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token function">fetch</span><span class="token punctuation">(</span>URL<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// データ処理</span>
+
+<span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+
+console<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">'データの読み込みに失敗しました:'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">}</span>
+
+</code></pre>
+<h2 id="今後の拡張可能性">7. 今後の拡張可能性</h2>
+<h3 id="追加機能案">7.1 追加機能案</h3>
+<ul>
+<li>
+<p>ユーザー認証</p>
+</li>
+<li>
+<p>学習履歴の保存</p>
+</li>
+<li>
+<p>正答率の統計</p>
+</li>
+<li>
+<p>難易度設定</p>
+</li>
+<li>
+<p>音声読み上げ機能</p>
+</li>
+</ul>
+<h3 id="パフォーマンス改善案">7.2 パフォーマンス改善案</h3>
+<ul>
+<li>
+<p>データのキャッシュ</p>
+</li>
+<li>
+<p>画像のプリロード</p>
+</li>
+<li>
+<p>コード分割</p>
+</li>
+</ul>
+<h2 id="メンテナンス注意点">8. メンテナンス注意点</h2>
+<h3 id="データ更新">8.1 データ更新</h3>
+<ul>
+<li>
+<p>スプレッドシートの公開設定の維持</p>
+</li>
+<li>
+<p>データフォーマットの厳守（B列：意味、C列：単語）</p>
+</li>
+</ul>
+<h3 id="ブラウザ対応">8.2 ブラウザ対応</h3>
+<ul>
+<li>
+<p>モダンブラウザ対応</p>
+</li>
+<li>
+<p>レスポンシブデザイン対応済み</p>
+</li>
+</ul>
+<hr>
+<p>最終更新日: 2024年10月25日</p>
+</div>
+</body>
+
+</html>
