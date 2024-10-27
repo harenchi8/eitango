@@ -59,6 +59,12 @@
             margin: 20px 0;
         }
 
+        .result-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
         .result-btn {
             font-size: 24px;
             width: 60px;
@@ -252,10 +258,11 @@
             </div>
         </div>
         <div class="button-container">
-            <div>
+            <div class="result-buttons">
                 <button class="result-btn correct" id="correct-button">⭕</button>
                 <button class="result-btn incorrect" id="incorrect-button">❌</button>
             </div>
+            <button id="answer-end-button" class="end-btn">終了する</button>
         </div>
     </div>
 
@@ -325,12 +332,12 @@
                     .filter(item => item.word && item.meaning); // 不完全なデータを除外
 
                 // デバッグ用のログ出力
-                console.log('Loaded vocabulary data:', vocabularyData);
+                // console.log('Loaded vocabulary data:', vocabularyData);
 
                 // Unit選択肢を動的に生成
                 updateUnitOptions();
             } catch (error) {
-                console.error('データの読み込みに失敗しました:', error);
+                // console.error('データの読み込みに失敗しました:', error);
                 alert('データの読み込みに失敗しました。ページを更新してください。');
             }
         }
@@ -388,13 +395,15 @@
 
         // 次の問題に進む
         function goToNextQuestion() {
-            currentIndex++;
-            if (currentIndex < currentQuestions.length) {
-                showQuestion();
-            } else {
-                showComplete();
-            }
+        currentIndex++;
+        if (currentIndex < currentQuestions.length) {
+            showQuestion();
+        } else {
+            // currentIndexを調整（最後の問題のインデックスに）
+            currentIndex--;
+            showComplete();
         }
+    }
 
         // Unit選択肢を更新する関数
         function updateUnitOptions() {
@@ -475,17 +484,31 @@
                 ) || this.voices[0];
             }
 
+            // テキストを整形する関数を追加
+            cleanTextForSpeech(text) {
+                return text
+                    .replace(/~/g, '') // チルダを除去
+                    .replace(/\s+/g, ' ') // 複数の空白を1つに
+                    .trim(); // 前後の空白を除去
+            }
+
             // テキストを読み上げ
             speak(text, element) {
                 // 既存の読み上げをキャンセル
                 this.synthesis.cancel();
 
+                // テキストを整形
+                const cleanedText = this.cleanTextForSpeech(text);
+
                 // 読み上げる内容を設定
-                const utterance = new SpeechSynthesisUtterance(text);
+                const utterance = new SpeechSynthesisUtterance(cleanedText);
                 utterance.voice = this.selectedVoice;
                 utterance.rate = 0.9;  // 少しゆっくり
                 utterance.pitch = 1;
                 utterance.volume = 1;
+
+                // デバッグ用のログ出力
+                console.log('Reading text:', cleanedText);
 
                 // 読み上げ開始時のアニメーション
                 element.classList.add('speaking');
@@ -495,39 +518,46 @@
                     element.classList.remove('speaking');
                 };
 
+                // エラー発生時の処理
+                utterance.onerror = (event) => {
+                    console.error('Speech synthesis error:', event);
+                    element.classList.remove('speaking');
+                };
+
                 // 読み上げ開始
                 this.synthesis.speak(utterance);
             }
         }
 
         // 完了画面を表示する
-        function showComplete() {
-            const totalQuestions = currentIndex + 1;
-            const correctAnswers = stats.correct;
-            const incorrectAnswers = stats.incorrect;
+        function showComplete(excludeCurrentQuestion = false) {
+            // 問題数のカウントを修正
+            const questionsCount = excludeCurrentQuestion ? 
+                currentIndex : // 現在の問題を除外
+                currentIndex + 1; // 現在の問題を含む
 
-            // 統計情報の更新
-            document.getElementById('total-questions').textContent = totalQuestions;
-            document.getElementById('correct-answers').textContent = correctAnswers;
-            document.getElementById('incorrect-answers').textContent = incorrectAnswers;
+            document.getElementById('total-questions').textContent = questionsCount;
+            document.getElementById('correct-answers').textContent = stats.correct;
+            document.getElementById('incorrect-answers').textContent = stats.incorrect;
+
+            // 全問正解かどうかのチェック
+            const perfectScore = stats.correct === questionsCount && stats.incorrect === 0 && questionsCount > 0;
 
             // メッセージの表示制御
             const perfectMessage = document.getElementById('perfect-message');
             const normalMessage = document.getElementById('normal-message');
             const retryButtonContainer = document.getElementById('retry-button-container');
 
-            if (incorrectAnswers === 0 && totalQuestions > 0) {
-                // 全問正解の場合
+            if (perfectScore) {
                 perfectMessage.style.display = 'block';
                 normalMessage.style.display = 'none';
             } else {
-                // 不正解がある場合
                 perfectMessage.style.display = 'none';
                 normalMessage.style.display = 'block';
             }
 
             // 間違えた問題がある場合のみ復習ボタンを表示
-            retryButtonContainer.style.display = incorrectAnswers > 0 ? 'block' : 'none';
+            retryButtonContainer.style.display = incorrectQuestions.length > 0 ? 'block' : 'none';
 
             showScreen('complete-screen');
         }
@@ -554,7 +584,6 @@
             // スタートボタン
             document.getElementById('start-button').addEventListener('click', () => {
                 const selectedUnit = document.getElementById('unit-select').value;
-                // 選択されたUnitでフィルタリング
                 const filteredData = filterQuestionsByUnit(selectedUnit);
                 
                 if (filteredData.length === 0) {
@@ -562,7 +591,7 @@
                     return;
                 }
 
-                currentQuestions = shuffleArray([...vocabularyData]);
+                currentQuestions = shuffleArray([...filteredData]);
                 currentIndex = 0;
                 stats = { correct: 0, incorrect: 0 };
                 incorrectQuestions = [];
@@ -585,9 +614,14 @@
                 goToNextQuestion();
             });
 
-            // 終了するボタン
+            // Question画面の終了ボタン
             document.getElementById('end-button').addEventListener('click', () => {
-                showComplete();
+                showComplete(true); // 現在の問題を除外
+            });
+
+            // Answer画面の終了ボタン
+            document.getElementById('answer-end-button').addEventListener('click', () => {
+                showComplete(true); // 現在の問題を除外
             });
 
             // 間違えた問題を復習するボタン
@@ -596,7 +630,7 @@
                     currentQuestions = shuffleArray([...incorrectQuestions]);
                     currentIndex = 0;
                     stats = { correct: 0, incorrect: 0 };
-                    incorrectQuestions = [];
+                    incorrectQuestions = []; // 復習用の配列をクリア
                     showQuestion();
                 }
             });
