@@ -179,13 +179,48 @@
             animation: pulse 1s infinite;
             color: #2196F3;
         }
+
+        /* Unit選択用の追加スタイル */
+        .select-container {
+            margin: 15px 0;
+        }
+
+        .select-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        select {
+            width: 200px;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            background-color: white;
+            font-size: 16px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+        }
     </style>
 </head>
 <body>
     <!-- スタート画面 -->
     <div id="start-screen" class="screen active">
         <h1>英単語カード</h1>
-        <div>
+        <div class="select-container">
+            <label for="unit-select">学習するUnit:</label>
+            <select id="unit-select">
+                <option value="all">全て</option>
+                <!-- Unit options will be populated dynamically -->
+            </select>
+        </div>
+        <div class="select-container">
+            <label for="question-type">問題タイプ:</label>
             <select id="question-type">
                 <option value="word-to-meaning">単語→意味</option>
                 <option value="meaning-to-word">意味→単語</option>
@@ -272,15 +307,66 @@
             try {
                 const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQOncZM-qRpnWgR0Bn9AFEJt654YAej9ydIQ-a3cv6HgAUDU_F2_y1T7EZw6CqJYPAKcxtk6nHJmY29/pub?gid=0&single=true&output=csv');
                 const csvText = await response.text();
-                const rows = csvText.split('\n').map(row => row.split(','));
-                // ヘッダーを除外し、C列（単語）とB列（意味）のデータを取得
-                vocabularyData = rows.slice(1).map(row => ({
-                    word: row[2],
-                    meaning: row[1]
-                }));
+                
+                // CSVの行を分割
+                const lines = csvText.split(/\r?\n/);
+                
+                // ヘッダー行を除外し、各行をパース
+                vocabularyData = lines.slice(1)
+                    .filter(line => line.trim()) // 空行を除外
+                    .map(line => {
+                        const fields = parseCSVLine(line);
+                        return {
+                            word: fields[2],      // C列：単語
+                            meaning: fields[1],   // B列：意味
+                            unit: fields[4]       // E列：Unit
+                        };
+                    })
+                    .filter(item => item.word && item.meaning); // 不完全なデータを除外
+
+                // デバッグ用のログ出力
+                console.log('Loaded vocabulary data:', vocabularyData);
+
+                // Unit選択肢を動的に生成
+                updateUnitOptions();
             } catch (error) {
                 console.error('データの読み込みに失敗しました:', error);
+                alert('データの読み込みに失敗しました。ページを更新してください。');
             }
+        }
+
+        // CSVの行を適切にパースする関数（引用符内のカンマを考慮）
+        function parseCSVLine(line) {
+            const fields = [];
+            let currentField = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        // エスケープされた引用符
+                        currentField += '"';
+                        i++; // 次の引用符をスキップ
+                    } else {
+                        // 引用符の開始または終了
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    // フィールドの区切り（引用符の外側のカンマ）
+                    fields.push(currentField.trim());
+                    currentField = '';
+                } else {
+                    // 通常の文字
+                    currentField += char;
+                }
+            }
+            
+            // 最後のフィールドを追加
+            fields.push(currentField.trim());
+            
+            return fields;
         }
 
         // 画面を切り替える
@@ -308,6 +394,33 @@
             } else {
                 showComplete();
             }
+        }
+
+        // Unit選択肢を更新する関数
+        function updateUnitOptions() {
+            const unitSelect = document.getElementById('unit-select');
+            const units = [...new Set(vocabularyData.map(item => item.unit))]
+                .filter(unit => unit) // 空値を除外
+                .sort((a, b) => Number(a) - Number(b)); // 数値として昇順ソート
+
+            // 既存のオプションをクリア（全ての選択肢は維持）
+            unitSelect.innerHTML = '<option value="all">全て</option>';
+
+            // Unit選択肢を追加
+            units.forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit;
+                option.textContent = `Unit ${unit}`;
+                unitSelect.appendChild(option);
+            });
+        }
+
+        // 選択されたUnitに基づいて問題をフィルタリングする関数
+        function filterQuestionsByUnit(unit) {
+            if (unit === 'all') {
+                return [...vocabularyData];
+            }
+            return vocabularyData.filter(item => item.unit === unit);
         }
 
         // 問題を表示する
@@ -440,6 +553,15 @@
 
             // スタートボタン
             document.getElementById('start-button').addEventListener('click', () => {
+                const selectedUnit = document.getElementById('unit-select').value;
+                // 選択されたUnitでフィルタリング
+                const filteredData = filterQuestionsByUnit(selectedUnit);
+                
+                if (filteredData.length === 0) {
+                    alert('選択したUnitには問題が登録されていません。');
+                    return;
+                }
+
                 currentQuestions = shuffleArray([...vocabularyData]);
                 currentIndex = 0;
                 stats = { correct: 0, incorrect: 0 };
