@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,14 +19,15 @@
             background: white;
             padding: 30px;
             border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .active {
             display: block;
         }
 
-        select, button {
+        select,
+        button {
             padding: 10px 20px;
             margin: 10px;
             font-size: 16px;
@@ -51,10 +53,11 @@
             margin: 20px 0;
             background: #fff;
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
-        .question, .answer {
+        .question,
+        .answer {
             font-size: 24px;
             margin: 20px 0;
         }
@@ -122,7 +125,7 @@
             text-align: center;
             margin: 20px 0;
             animation: celebrate 1s ease-in-out infinite;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .celebration-emoji {
@@ -133,13 +136,27 @@
         }
 
         @keyframes celebrate {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
         }
 
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
         }
 
         .normal-complete {
@@ -176,9 +193,17 @@
 
         /* アニメーション効果 */
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         .speaking {
@@ -212,18 +237,106 @@
             border-color: #4CAF50;
             box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
         }
+
+        /* Unitチェックボックス用のスタイル追加 */
+        .checkbox-container {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: white;
+        }
+
+        .checkbox-container h2 {
+            font-size: 16px;
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .unit-checkbox {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+
+        .unit-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .unit-checkbox label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .select-all-container {
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* バリデーションメッセージ用のスタイル */
+        .validation-message {
+            color: #f44336;
+            font-size: 14px;
+            margin: 5px 0;
+            display: none;
+        }
+
+        /* 進捗インジケーター用のスタイル */
+        .progress-indicator {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-current {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .progress-total {
+            color: #666;
+        }
+
+        /* カード内のレイアウト調整 */
+        .card {
+            position: relative;
+            padding-top: 20px;
+        }
+
+        .word-container {
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <!-- スタート画面 -->
     <div id="start-screen" class="screen active">
         <h1>英単語カード</h1>
-        <div class="select-container">
-            <label for="unit-select">学習するUnit:</label>
-            <select id="unit-select">
-                <option value="all">全て</option>
-                <!-- Unit options will be populated dynamically -->
-            </select>
+        <div class="checkbox-container">
+            <div class="select-all-container">
+                <div class="unit-checkbox">
+                    <input type="checkbox" id="select-all">
+                    <label for="select-all">すべて選択</label>
+                </div>
+            </div>
+            <div id="unit-checkboxes">
+                <!-- チェックボックスが動的に追加される -->
+            </div>
+        </div>
+        <div class="validation-message" id="unit-validation-message">
+            少なくとも1つのUnitを選択してください。
         </div>
         <div class="select-container">
             <label for="question-type">問題タイプ:</label>
@@ -237,6 +350,10 @@
 
     <!-- 問題画面 -->
     <div id="question-screen" class="screen">
+        <div class="progress-indicator">
+            Question <span id="question-progress-current" class="progress-current">1</span> /
+            <span id="question-progress-total" class="progress-total">10</span>
+        </div>
         <div class="card">
             <div class="word-container">
                 <div class="question" id="question-text"></div>
@@ -251,6 +368,10 @@
 
     <!-- 答え画面 -->
     <div id="answer-screen" class="screen">
+        <div class="progress-indicator">
+            Question <span id="answer-progress-current" class="progress-current">1</span> /
+            <span id="answer-progress-total" class="progress-total">10</span>
+        </div>
         <div class="card">
             <div class="word-container">
                 <div class="answer" id="answer-text"></div>
@@ -258,7 +379,7 @@
             </div>
         </div>
         <div class="button-container">
-            <div class="result-buttons">
+            <div>
                 <button class="result-btn correct" id="correct-button">⭕</button>
                 <button class="result-btn incorrect" id="incorrect-button">❌</button>
             </div>
@@ -278,7 +399,7 @@
                 <div>あなたの英語力は確実に上がっています！</div>
             </div>
         </div>
-        
+
         <!-- 通常の完了メッセージ -->
         <div id="normal-message" style="display: none;">
             <div class="normal-complete">お疲れ様でした！</div>
@@ -314,10 +435,10 @@
             try {
                 const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQOncZM-qRpnWgR0Bn9AFEJt654YAej9ydIQ-a3cv6HgAUDU_F2_y1T7EZw6CqJYPAKcxtk6nHJmY29/pub?gid=0&single=true&output=csv');
                 const csvText = await response.text();
-                
+
                 // CSVの行を分割
                 const lines = csvText.split(/\r?\n/);
-                
+
                 // ヘッダー行を除外し、各行をパース
                 vocabularyData = lines.slice(1)
                     .filter(line => line.trim()) // 空行を除外
@@ -347,10 +468,10 @@
             const fields = [];
             let currentField = '';
             let inQuotes = false;
-            
+
             for (let i = 0; i < line.length; i++) {
                 const char = line[i];
-                
+
                 if (char === '"') {
                     if (inQuotes && line[i + 1] === '"') {
                         // エスケープされた引用符
@@ -369,10 +490,10 @@
                     currentField += char;
                 }
             }
-            
+
             // 最後のフィールドを追加
             fields.push(currentField.trim());
-            
+
             return fields;
         }
 
@@ -383,6 +504,7 @@
             });
             document.getElementById(screenId).classList.add('active');
         }
+        
 
         // 配列をシャッフルする
         function shuffleArray(array) {
@@ -395,41 +517,86 @@
 
         // 次の問題に進む
         function goToNextQuestion() {
-        currentIndex++;
-        if (currentIndex < currentQuestions.length) {
-            showQuestion();
-        } else {
-            // currentIndexを調整（最後の問題のインデックスに）
-            currentIndex--;
-            showComplete();
+            currentIndex++;
+            if (currentIndex < currentQuestions.length) {
+                showQuestion();
+            } else {
+                // currentIndexを調整（最後の問題のインデックスに）
+                currentIndex--;
+                showComplete();
+            }
         }
-    }
+
+        // 進捗表示を更新する関数を追加
+        function updateProgressIndicators() {
+            const currentNumber = currentIndex + 1;
+            const totalQuestions = currentQuestions.length;
+            
+            // 問題画面の進捗を更新
+            const questionCurrent = document.getElementById('question-progress-current');
+            const questionTotal = document.getElementById('question-progress-total');
+            if (questionCurrent && questionTotal) {
+                questionCurrent.textContent = currentNumber;
+                questionTotal.textContent = totalQuestions;
+            }
+            
+            // 答え画面の進捗を更新
+            const answerCurrent = document.getElementById('answer-progress-current');
+            const answerTotal = document.getElementById('answer-progress-total');
+            if (answerCurrent && answerTotal) {
+                answerCurrent.textContent = currentNumber;
+                answerTotal.textContent = totalQuestions;
+            }
+        }
 
         // Unit選択肢を更新する関数
         function updateUnitOptions() {
-            const unitSelect = document.getElementById('unit-select');
             const units = [...new Set(vocabularyData.map(item => item.unit))]
                 .filter(unit => unit) // 空値を除外
                 .sort((a, b) => Number(a) - Number(b)); // 数値として昇順ソート
 
-            // 既存のオプションをクリア（全ての選択肢は維持）
-            unitSelect.innerHTML = '<option value="all">全て</option>';
+            const unitCheckboxesContainer = document.getElementById('unit-checkboxes');
+            unitCheckboxesContainer.innerHTML = ''; // 既存のチェックボックスをクリア
 
-            // Unit選択肢を追加
             units.forEach(unit => {
-                const option = document.createElement('option');
-                option.value = unit;
-                option.textContent = `Unit ${unit}`;
-                unitSelect.appendChild(option);
+                const checkbox = document.createElement('div');
+                checkbox.className = 'unit-checkbox';
+                checkbox.innerHTML = `
+                    <input type="checkbox" id="unit-${unit}" value="${unit}">
+                    <label for="unit-${unit}">Unit ${unit}</label>
+                `;
+                unitCheckboxesContainer.appendChild(checkbox);
+            });
+
+            // 全選択チェックボックスのイベントリスナー
+            const selectAllCheckbox = document.getElementById('select-all');
+            selectAllCheckbox.addEventListener('change', (e) => {
+                const checkboxes = document.querySelectorAll('#unit-checkboxes input[type="checkbox"]');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = e.target.checked;
+                });
+            });
+
+            // 個別のチェックボックスの変更を監視
+            const checkboxes = document.querySelectorAll('#unit-checkboxes input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    selectAllCheckbox.checked = allChecked;
+                });
             });
         }
 
-        // 選択されたUnitに基づいて問題をフィルタリングする関数
-        function filterQuestionsByUnit(unit) {
-            if (unit === 'all') {
-                return [...vocabularyData];
+        // 選択されたUnitに基づいて問題をフィルタリングする関数を修正
+        function filterQuestionsBySelectedUnits() {
+            const checkboxes = document.querySelectorAll('#unit-checkboxes input[type="checkbox"]:checked');
+            const selectedUnits = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedUnits.length === 0) {
+                return null; // 選択なしの場合はnullを返す
             }
-            return vocabularyData.filter(item => item.unit === unit);
+
+            return vocabularyData.filter(item => selectedUnits.includes(item.unit));
         }
 
         // 問題を表示する
@@ -443,6 +610,9 @@
             // スピーカーアイコンの表示制御
             const speakerIcon = document.getElementById('question-speaker');
             speakerIcon.style.display = questionType === 'word-to-meaning' ? 'inline-block' : 'none';
+            
+            // 進捗表示を更新
+            updateProgressIndicators();
             
             showScreen('question-screen');
         }
@@ -458,6 +628,9 @@
             // スピーカーアイコンの表示制御
             const speakerIcon = document.getElementById('answer-speaker');
             speakerIcon.style.display = questionType === 'meaning-to-word' ? 'inline-block' : 'none';
+            
+            // 進捗表示を更新
+            updateProgressIndicators();
             
             showScreen('answer-screen');
         }
@@ -479,7 +652,7 @@
             loadVoices() {
                 this.voices = this.synthesis.getVoices();
                 // 英語の音声を優先的に選択
-                this.selectedVoice = this.voices.find(voice => 
+                this.selectedVoice = this.voices.find(voice =>
                     voice.lang.startsWith('en-')
                 ) || this.voices[0];
             }
@@ -532,7 +705,7 @@
         // 完了画面を表示する
         function showComplete(excludeCurrentQuestion = false) {
             // 問題数のカウントを修正
-            const questionsCount = excludeCurrentQuestion ? 
+            const questionsCount = excludeCurrentQuestion ?
                 currentIndex : // 現在の問題を除外
                 currentIndex + 1; // 現在の問題を含む
 
@@ -565,27 +738,31 @@
         // イベントリスナーの設定
         document.addEventListener('DOMContentLoaded', async () => {
             await loadVocabularyData();
-            
+
             // 音声読み上げハンドラーの初期化
             const speechHandler = new SpeechHandler();
 
             // 問題画面のスピーカーボタン
-            document.getElementById('question-speaker').addEventListener('click', function() {
+            document.getElementById('question-speaker').addEventListener('click', function () {
                 const text = document.getElementById('question-text').textContent;
                 speechHandler.speak(text, this);
             });
 
             // 答え画面のスピーカーボタン
-            document.getElementById('answer-speaker').addEventListener('click', function() {
+            document.getElementById('answer-speaker').addEventListener('click', function () {
                 const text = document.getElementById('answer-text').textContent;
                 speechHandler.speak(text, this);
             });
 
             // スタートボタン
             document.getElementById('start-button').addEventListener('click', () => {
-                const selectedUnit = document.getElementById('unit-select').value;
-                const filteredData = filterQuestionsByUnit(selectedUnit);
-                
+                const filteredData = filterQuestionsBySelectedUnits();
+            
+                if (!filteredData) {
+                    document.getElementById('unit-validation-message').style.display = 'block';
+                    return;
+                }
+
                 if (filteredData.length === 0) {
                     alert('選択したUnitには問題が登録されていません。');
                     return;
@@ -595,20 +772,28 @@
                 currentIndex = 0;
                 stats = { correct: 0, incorrect: 0 };
                 incorrectQuestions = [];
+                
+                // 進捗表示を初期化
+                updateProgressIndicators();
                 showQuestion();
+            });
+
+            // チェックボックスの変更時にバリデーションメッセージを隠す
+            document.getElementById('unit-checkboxes').addEventListener('change', () => {
+                document.getElementById('unit-validation-message').style.display = 'none';
             });
 
             // 答えを見るボタン
             document.getElementById('show-answer').addEventListener('click', showAnswer);
 
             // 正解ボタン
-            document.getElementById('correct-button').addEventListener('click', function() {
+            document.getElementById('correct-button').addEventListener('click', function () {
                 stats.correct++;
                 goToNextQuestion();
             });
 
             // 不正解ボタン
-            document.getElementById('incorrect-button').addEventListener('click', function() {
+            document.getElementById('incorrect-button').addEventListener('click', function () {
                 stats.incorrect++;
                 incorrectQuestions.push(currentQuestions[currentIndex]);
                 goToNextQuestion();
@@ -642,4 +827,5 @@
         });
     </script>
 </body>
+
 </html>
